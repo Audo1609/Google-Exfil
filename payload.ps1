@@ -2,7 +2,7 @@
 
 # $botToken = "bot_token"
 # $chatID = "chat_id"
-# $webhook = "dc_webhook"
+$webhook = "https://discord.com/api/webhooks/1358791393405047081/Uz8PRcFd4de_7tDePzmRsTlGKo76zMkjehmo0WvYw-REPkgNXexXGBK2b78RRfOmWU3N"
 
 # Function for sending messages through Telegram Bot
 function Send-TelegramMessage {
