@@ -140,4 +140,8 @@ if ($link -ne $null) {
 }
 
 # Remove the zip file after uploading
-Remove-Item $outputZip
+Remove-Item $outputZip -Force
+
+# Ensure the script exits after all operations are complete
+Write-Host "Script completed successfully, exiting."
+exit
